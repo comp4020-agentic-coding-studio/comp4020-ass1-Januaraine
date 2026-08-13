@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>COMP4020 prototype</title>
+    <title>When a Robot Moves, Which Problem Is It Solving? — FK vs IK</title>
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
@@ -11,13 +11,13 @@
       <nav aria-label="Primary">
         <a href="./">Home</a>
       </nav>
+      <h1>When a Robot Moves, Which Problem Is It Solving?</h1>
+      <p class="subtitle">Forward Kinematics vs Inverse Kinematics</p>
+      <p class="tagline">Move the joints. Then move the target. Notice what changes.</p>
     </header>
     <main>
-      <h1>COMP4020 prototype</h1>
-      <p data-testid="intro">
-        Replace this with your prototype. This week's brief is on the course website;
-        <code>spec/README.md</code> explains how the checks in this repo relate to it.
-      </p>
+      <div id="scene-root" data-testid="scene-root" aria-label="3D robotic arm scene"></div>
+      <p id="scene-status" data-testid="scene-status" role="status"></p>
     </main>
     <script type="module" src="./main.ts"></script>
   </body>
