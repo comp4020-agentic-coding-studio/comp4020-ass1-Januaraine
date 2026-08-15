@@ -16,10 +16,20 @@ export const LINK_LENGTHS = {
 
 export const MAX_REACH = LINK_LENGTHS.shoulder + LINK_LENGTHS.elbow + LINK_LENGTHS.wrist;
 
+/**
+ * Wraps an angle (or an angle difference) into (-π, π]. `%` alone doesn't do
+ * this correctly for magnitudes near ±2π — e.g. `((-6 + π) % 2π) - π` returns
+ * -6 unchanged in JS, because `%` there keeps the sign/magnitude of the
+ * dividend rather than reducing it mod 2π first. Rounding to the nearest
+ * multiple of 2π and subtracting is exact regardless of magnitude or sign.
+ */
+export function wrapAngle(rad: number): number {
+  return rad - 2 * Math.PI * Math.round(rad / (2 * Math.PI));
+}
+
 /** Shortest-path angle interpolation — lerping raw radians breaks near the ±π wrap. */
 export function lerpAngle(from: number, to: number, t: number): number {
-  const diff = ((to - from + Math.PI) % (2 * Math.PI)) - Math.PI;
-  return from + diff * t;
+  return from + wrapAngle(to - from) * t;
 }
 
 export interface JointAngles {

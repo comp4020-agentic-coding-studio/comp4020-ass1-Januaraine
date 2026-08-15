@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { DrawingUtils, FilesetResolver, HolisticLandmarker, type NormalizedLandmark } from "@mediapipe/tasks-vision";
-import { LINK_LENGTHS, lerpAngle, MAX_REACH } from "./arm";
+import { LINK_LENGTHS, lerpAngle, MAX_REACH, wrapAngle } from "./arm";
 
 // Keep in sync with the installed @mediapipe/tasks-vision version — the WASM
 // runtime is fetched from the jsdelivr CDN at this exact version so it always
@@ -59,7 +59,24 @@ const DEPTH_BASE = 1.1;
 const DEPTH_SCALE = 4.5;
 // Landmark 8 (a fingertip) moves faster and jitters more than the stable MCP
 // joint the previous palm-only version tracked, so it's smoothed a bit harder.
-const SMOOTHING = 0.25;
+const SMOOTHING = 0.15;
+// getUserMedia never mirrors frame data — a `facingMode: "user"` stream is
+// raw sensor pixels, same as a straight (non-selfie) photo, so a hand raised
+// to the subject's own right appears on the LEFT side of the raw frame (the
+// same left/right swap as facing another person). The preview canvas below
+// applies a CSS mirror for a natural "looking in a mirror" feel, but that's a
+// display-only transform — nothing here reads it. Both the 3D target position
+// and the elbow/wrist angles are built from the two functions below, so if a
+// given camera/browser ever hands back frames that read the other way, this
+// is the single place to flip.
+const MIRROR_HORIZONTAL = true;
+// A single dropped detection frame (motion blur, brief occlusion) shouldn't
+// snap the arm-pose-driven joints back to the plain position IK — that
+// created a visible flicker between two quite different poses whenever
+// tracking blinked on/off. Holding the last known chain for a short window
+// smooths over that without meaningfully delaying a real hand-leaves-frame
+// event.
+const TRACKING_LOSS_HYSTERESIS_MS = 300;
 
 // BlazePose pose-landmark indices (shoulder/elbow only — wrist/hand come from
 // the hand model instead, see below).
@@ -92,37 +109,56 @@ function handOrientation(hand: NormalizedLandmark[]): number | null {
   return toIndex.angle() - toPinky.angle();
 }
 
-function wrapAngle(rad: number): number {
-  return ((rad + Math.PI) % (2 * Math.PI)) - Math.PI;
+// Single source of truth for image-space → world-plane axis alignment. Both
+// the fingertip target below and the elbow/wrist angles here call these two
+// functions and nothing else to turn a raw landmark coordinate into a
+// reach-like / height-like value, so they can't disagree about which way is
+// left/right or up/down — a bug in one would show up as a bug in both, and a
+// fix here fixes both at once.
+function horizontalCoord(x: number): number {
+  return MIRROR_HORIZONTAL ? 1 - x : x;
+}
+function verticalCoord(y: number): number {
+  // Image y grows downward (0 = top of frame); world height grows upward.
+  return 1 - y;
 }
 
 // The robot's own theta1/theta2/theta3 convention (see arm.ts) measures each
 // segment's direction as an angle in one vertical plane, via
 // cos(angle) = reach component, sin(angle) = height component. This mirrors
-// that for a pair of tracked image-space points, using the same
-// horizontal/vertical flip already applied to the fingertip target below
-// (image x/y → world reach/height), so a segment vector built this way and
-// the fingertip target agree on which way is "up." Built as a Vector3 (z=0)
-// so it's a genuine vector angle computation, not just two atan2 calls on
-// raw numbers — but deliberately 2D: shoulder/elbow come from the pose
-// model's z (world-scale depth) while wrist/hand come from the hand model's
-// z (relative to that hand's own wrist, a different scale entirely), so a
-// vector spanning the two — e.g. elbow→wrist — would subtract two
-// incompatible depth values. Using x/y only avoids manufacturing a fake
-// "more 3D" number out of two numbers that were never on the same scale.
-function segmentAngle(from: Point2D, to: Point2D): number {
-  const v = new THREE.Vector3(-(to.x - from.x), -(to.y - from.y), 0);
+// that for a pair of tracked image-space points, running both coordinates
+// through horizontalCoord/verticalCoord above — the same functions the
+// fingertip target uses — so a segment vector built this way and the
+// fingertip target agree on which way is "up" and which way is "right."
+// Built as a Vector3 (z=0) so it's a genuine vector angle computation, not
+// just two atan2 calls on raw numbers — but deliberately 2D: shoulder/elbow
+// come from the pose model's z (world-scale depth) while wrist/hand come
+// from the hand model's z (relative to that hand's own wrist, a different
+// scale entirely), so a vector spanning the two — e.g. elbow→wrist — would
+// subtract two incompatible depth values. Using x/y only avoids
+// manufacturing a fake "more 3D" number out of two numbers that were never
+// on the same scale.
+export function segmentAngle(from: Point2D, to: Point2D): number {
+  const v = new THREE.Vector3(
+    horizontalCoord(to.x) - horizontalCoord(from.x),
+    verticalCoord(to.y) - verticalCoord(from.y),
+    0,
+  );
   return Math.atan2(v.y, v.x);
 }
 
 /** Signed elbow bend (shoulder→elbow vs elbow→wrist), in the robot's theta2 convention (a2 = a1 + theta2). */
-function elbowBendAngle(shoulder: Point2D | null, elbow: Point2D | null, wrist: Point2D | null): number | null {
+export function elbowBendAngle(
+  shoulder: Point2D | null,
+  elbow: Point2D | null,
+  wrist: Point2D | null,
+): number | null {
   if (!shoulder || !elbow || !wrist) return null;
   return wrapAngle(segmentAngle(elbow, wrist) - segmentAngle(shoulder, elbow));
 }
 
 /** Signed wrist pitch (elbow→wrist vs wrist→hand), in the robot's theta3 convention (a3 = a2 + theta3). */
-function wristPitchAngle(elbow: Point2D | null, wrist: Point2D | null, hand: Point2D | null): number | null {
+export function wristPitchAngle(elbow: Point2D | null, wrist: Point2D | null, hand: Point2D | null): number | null {
   if (!elbow || !wrist || !hand) return null;
   return wrapAngle(segmentAngle(wrist, hand) - segmentAngle(elbow, wrist));
 }
@@ -149,6 +185,8 @@ export class HandTracker {
   private smoothedElbowBend: number | null = null;
   private smoothedWristPitch: number | null = null;
   private activeSide: "left" | "right" | null = null;
+  private lastTrackedPose: TrackedPose | null = null;
+  private lastGoodDetectionAt: number | null = null;
   private readonly onStatus: HandTrackingOptions["onStatus"];
   private readonly onTarget: HandTrackingOptions["onTarget"];
   private readonly onPose: HandTrackingOptions["onPose"];
@@ -277,18 +315,27 @@ export class HandTracker {
           elbowBendRad: this.smoothedElbowBend,
           wristPitchRad: this.smoothedWristPitch,
         };
+        this.lastTrackedPose = trackedPose;
+        this.lastGoodDetectionAt = performance.now();
         this.onPose?.(trackedPose);
         this.drawOverlay(trackedPose, hand);
 
         const tip = hand[HAND_LANDMARK.indexTip];
-        const rawX = (0.5 - tip.x) * 2 * (LINK_LENGTHS.shoulder + LINK_LENGTHS.elbow);
-        const rawY = LINK_LENGTHS.base + (1 - tip.y) * HEIGHT_RANGE;
+        const rawX = (horizontalCoord(tip.x) - 0.5) * 2 * (LINK_LENGTHS.shoulder + LINK_LENGTHS.elbow);
+        const rawY = LINK_LENGTHS.base + verticalCoord(tip.y) * HEIGHT_RANGE;
         const rawZ = DEPTH_BASE + -tip.z * DEPTH_SCALE;
         const raw = new THREE.Vector3(rawX, rawY, rawZ).clampLength(0, MAX_REACH * 1.5);
         this.smoothed = this.smoothed ? this.smoothed.lerp(raw, SMOOTHING) : raw;
         this.onTarget?.(this.smoothed.clone());
         this.onStatus?.("tracking");
+      } else if (this.lastTrackedPose && performance.now() - (this.lastGoodDetectionAt ?? 0) < TRACKING_LOSS_HYSTERESIS_MS) {
+        // Within the grace window: replay the last good chain rather than
+        // reporting "no-hand" so main.ts doesn't null out trackedPose and
+        // fall back to a level-tool IK solve for a single blinked frame.
+        this.onPose?.(this.lastTrackedPose);
+        this.onStatus?.("tracking");
       } else {
+        this.lastTrackedPose = null;
         this.onStatus?.("no-hand");
       }
     }

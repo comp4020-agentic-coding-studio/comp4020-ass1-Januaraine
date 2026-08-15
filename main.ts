@@ -127,12 +127,15 @@ if (sceneRoot) {
       // wrist visibly match the real arm's posture instead of just whatever
       // angles reach the target with a level tool. Falling back to
       // `result.theta2/theta3` (the classic solve) when no pose is tracked —
-      // e.g. the Shift-drag fallback — needs no special-casing here.
+      // e.g. the Shift-drag fallback — needs no special-casing here. A second
+      // actuator-level lerp (on top of handTracking.ts's own source-level
+      // smoothing) damps whatever per-frame noise still reaches this point
+      // before it hits the joint.
       const clampJoint = (v: number) => Math.max(-2.6, Math.min(2.6, v));
       currentAngles = {
-        theta1: result.theta1,
-        theta2: clampJoint(trackedPose?.elbowBendRad ?? result.theta2),
-        theta3: clampJoint(trackedPose?.wristPitchRad ?? result.theta3),
+        theta1: lerpAngle(currentAngles.theta1, result.theta1, 0.15),
+        theta2: clampJoint(lerpAngle(currentAngles.theta2, trackedPose?.elbowBendRad ?? result.theta2, 0.15)),
+        theta3: clampJoint(lerpAngle(currentAngles.theta3, trackedPose?.wristPitchRad ?? result.theta3, 0.15)),
         baseYaw: lerpAngle(currentAngles.baseYaw, planarTarget.baseYaw, 0.15),
       };
       robotArm.setAngles(currentAngles);
