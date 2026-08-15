@@ -624,85 +624,57 @@ main.dashboard {
  * next positioned ancestor (or the page itself) instead of staying pinned
  * to the scene.
  */
-@media (width <= 1024px) {
-  body {
-    overflow-y: auto;
+@media screen and (max-width: 1024px) {
+  html, body {
+    height: auto !important;
+    overflow-y: auto !important;
   }
 
-  main.dashboard {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-    overflow-y: visible;
+  main.dashboard,
+  .dashboard-container,
+  #app {
+    display: flex !important;
+    flex-direction: column !important;
+    height: auto !important;
+    min-height: 100vh !important;
+    gap: 16px !important;
+    overflow: visible !important;
   }
 
-  /* Every top-level section and card: back to normal flow, sized to its own
-     content, so nothing can overlap or cover anything else. */
   #control-panel,
   #right-panel,
   #bottom-grid,
-  .mode-toggle,
-  .card {
-    position: static;
-    height: auto;
-    max-height: none;
-  }
-
-  #control-panel,
-  #right-panel {
-    width: 100%;
-    max-height: none;
-    overflow-y: visible;
-    border-left: none;
-    border-right: none;
-    border-top: 1px solid #1e222a;
-  }
-
-  /* The one section that keeps a fixed height and stays positioned — see
-     the block comment above. overflow: hidden keeps its on-canvas overlays
-     from spilling past its edges into the section below. */
-  #scene-panel {
-    position: relative;
-    overflow: hidden;
-    flex: none;
-    width: 100%;
-    height: 350px;
-  }
-
-  /* The webcam preview is already a normal in-flow child of #control-panel
-     (mounted with replaceChildren, never appended elsewhere) — these rules
-     are a hard guarantee that it renders as a plain in-flow block and can
-     never end up absolute/fixed or escape #camera-preview, whatever inline
-     styles the tracker sets on the canvas itself (it only ever sets a mirror
-     transform, but this closes off the possibility regardless). */
-  #camera-preview,
-  #camera-preview canvas {
+  #control-panel > *,
+  #right-panel > *,
+  #bottom-grid > *,
+  .card,
+  .mode-toggle {
     position: relative !important;
     top: auto !important;
     left: auto !important;
-    width: 100%;
-    max-width: 100%;
-    height: auto;
+    right: auto !important;
+    bottom: auto !important;
+    grid-area: auto !important;
+    grid-column: auto !important;
+    grid-row: auto !important;
+    width: 100% !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    transform: none !important;
   }
 
-  #camera-preview canvas {
-    border-radius: 8px;
-  }
-
-  /* Smaller joint-label footprint so callouts stay inside the shorter,
-     narrower mobile viewport instead of overhanging its edges. */
-  .joint-callout {
-    padding: 2px 6px;
-    font-size: 0.68rem;
+  #scene-panel {
+    position: relative !important;
+    width: 100% !important;
+    height: 350px !important;
+    flex: none !important;
+    overflow: hidden !important;
   }
 
   #bottom-grid {
-    grid-template-columns: 1fr;
-    gap: 16px;
-  }
-
-  #bottom-grid .card {
-    max-height: none;
-    overflow-y: visible;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 16px !important;
   }
 }
