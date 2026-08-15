@@ -610,30 +610,99 @@ main.dashboard {
   border-color: #2f4d82;
 }
 
-@media (width <= 720px) {
-  main.dashboard {
-    grid-template:
-      "center" minmax(240px, 40vh)
-      "left" auto
-      "right" auto
-      "bottom" auto
-      / 1fr;
+/*
+ * Mobile/tablet layout. Below this width the 3-column desktop grid (fixed
+ * side rails + a 1fr center column) gives each rail too little room, so
+ * every section drops back into plain document flow, stacked in a single
+ * column in DOM order (scene, controls, explanation/workspace, bottom
+ * cards) with no absolute positioning and no hardcoded heights — with one
+ * deliberate exception. #scene-panel keeps position: relative because the
+ * 3D scene's own on-canvas overlays (status pill, axis/reset toolbar, joint
+ * callouts, target legend) are position: absolute *against it*, which is
+ * what keeps them drawn over the canvas instead of in normal flow; resetting
+ * #scene-panel to static would detach them and let them drift up to the
+ * next positioned ancestor (or the page itself) instead of staying pinned
+ * to the scene.
+ */
+@media (width <= 1024px) {
+  body {
     overflow-y: auto;
   }
 
-  #control-panel {
-    border-left: none;
-    border-right: none;
-    border-top: 1px solid #1e222a;
+  main.dashboard {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
     overflow-y: visible;
   }
 
+  /* Every top-level section and card: back to normal flow, sized to its own
+     content, so nothing can overlap or cover anything else. */
+  #control-panel,
+  #right-panel,
+  #bottom-grid,
+  .mode-toggle,
+  .card {
+    position: static;
+    height: auto;
+    max-height: none;
+  }
+
+  #control-panel,
   #right-panel {
-    border-top: 1px solid #1e222a;
+    width: 100%;
+    max-height: none;
     overflow-y: visible;
+    border-left: none;
+    border-right: none;
+    border-top: 1px solid #1e222a;
+  }
+
+  /* The one section that keeps a fixed height and stays positioned — see
+     the block comment above. overflow: hidden keeps its on-canvas overlays
+     from spilling past its edges into the section below. */
+  #scene-panel {
+    position: relative;
+    overflow: hidden;
+    flex: none;
+    width: 100%;
+    height: 350px;
+  }
+
+  /* The webcam preview is already a normal in-flow child of #control-panel
+     (mounted with replaceChildren, never appended elsewhere) — these rules
+     are a hard guarantee that it renders as a plain in-flow block and can
+     never end up absolute/fixed or escape #camera-preview, whatever inline
+     styles the tracker sets on the canvas itself (it only ever sets a mirror
+     transform, but this closes off the possibility regardless). */
+  #camera-preview,
+  #camera-preview canvas {
+    position: relative !important;
+    top: auto !important;
+    left: auto !important;
+    width: 100%;
+    max-width: 100%;
+    height: auto;
+  }
+
+  #camera-preview canvas {
+    border-radius: 8px;
+  }
+
+  /* Smaller joint-label footprint so callouts stay inside the shorter,
+     narrower mobile viewport instead of overhanging its edges. */
+  .joint-callout {
+    padding: 2px 6px;
+    font-size: 0.68rem;
   }
 
   #bottom-grid {
     grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  #bottom-grid .card {
+    max-height: none;
+    overflow-y: visible;
   }
 }
