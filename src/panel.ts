@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { MAX_REACH } from "./arm";
 import type { JointAngles } from "./arm";
 import type { HandTrackingStatus, TrackedPose } from "./handTracking";
 
@@ -11,10 +12,24 @@ export interface FrameState {
   /** null in FK mode: no solving is happening, there's nothing to show. */
   jacobian: number[][] | null;
   errorNorm: number | null;
+  /** The (reach, height) point the Workspace diagram plots — the raw,
+   * unclamped IK target in IK mode (so it can visibly leave the reachable
+   * disc), or just the actual end effector in FK mode (always reachable). */
+  workspacePoint: { reach: number; height: number };
 }
 
 const HISTORY_LENGTH = 240;
 const CHART_RANGE_RAD = Math.PI;
+
+// Must match the #workspace-viz SVG's viewBox geometry in index.html: the
+// disc is centered at (WORKSPACE_ORIGIN_X, WORKSPACE_ORIGIN_Y) with radius
+// MAX_REACH * WORKSPACE_SCALE.
+const WORKSPACE_ORIGIN_X = 30;
+const WORKSPACE_ORIGIN_Y = 95;
+const WORKSPACE_SCALE = 77 / MAX_REACH;
+// Cosmetic-only clamp so an extreme tracked point still draws inside the SVG
+// viewport instead of flying off it; unrelated to the IK solver's own clamp.
+const WORKSPACE_DRAW_LIMIT = MAX_REACH * 1.35;
 
 function required<T extends Element>(selector: string): T {
   const el = document.querySelector<T>(selector);
@@ -23,9 +38,10 @@ function required<T extends Element>(selector: string): T {
 }
 
 /**
- * Owns every DOM element in the right-hand `#control-panel` (declared
- * statically in index.html so the built page is inspectable without running
- * JS): the FK/IK toggle, the FK sliders, the live Jacobian table, the
+ * Owns every DOM element across the dashboard's left (`#control-panel`) and
+ * right (`#right-panel`) columns, all declared statically in index.html so
+ * the built page is inspectable without running JS: the FK/IK toggle, the FK
+ * sliders, the live Jacobian table, the workspace-reachability dot, the
  * angle-history chart, and camera-tracking status. `main.ts` calls
  * `update()` once per animation frame with the current pose.
  */
@@ -34,6 +50,8 @@ export class ControlPanel {
   private readonly ikButton = required<HTMLButtonElement>("#mode-ik");
   private readonly fkControls = required<HTMLElement>("#fk-controls");
   private readonly ikControls = required<HTMLElement>("#ik-controls");
+  private readonly fkExplanation = required<HTMLElement>("#fk-explanation");
+  private readonly ikExplanation = required<HTMLElement>("#ik-explanation");
   private readonly sliders = {
     theta1: required<HTMLInputElement>("#slider-theta1"),
     theta2: required<HTMLInputElement>("#slider-theta2"),
@@ -46,7 +64,16 @@ export class ControlPanel {
     theta3: required<HTMLOutputElement>("#value-theta3"),
     baseYaw: required<HTMLOutputElement>("#value-yaw"),
   };
-  private readonly fkPosition = required<HTMLElement>("#fk-position");
+  private readonly stateCells = {
+    eeX: required<HTMLElement>('[data-state="ee-x"]'),
+    eeY: required<HTMLElement>('[data-state="ee-y"]'),
+    eeZ: required<HTMLElement>('[data-state="ee-z"]'),
+    theta1: required<HTMLElement>('[data-state="theta1"]'),
+    theta2: required<HTMLElement>('[data-state="theta2"]'),
+    theta3: required<HTMLElement>('[data-state="theta3"]'),
+    yaw: required<HTMLElement>('[data-state="yaw"]'),
+  };
+  private readonly workspaceDot = required<SVGCircleElement>("#workspace-dot");
   private readonly trackingStatus = required<HTMLElement>("#tracking-status");
   private readonly cameraPreview = required<HTMLElement>("#camera-preview");
   private readonly trackedCells = {
@@ -91,6 +118,12 @@ export class ControlPanel {
     this.ikButton.setAttribute("aria-pressed", String(mode === "ik"));
     this.fkControls.hidden = mode !== "fk";
     this.ikControls.hidden = mode !== "ik";
+    // The Jacobian table lives inside #ik-explanation, so hiding it here is
+    // what keeps it out of FK mode entirely (never shown, never focusable) —
+    // it stays in the built markup only because spec/scene.test.ts checks the
+    // static HTML for its 9 data-cell elements.
+    this.fkExplanation.hidden = mode !== "fk";
+    this.ikExplanation.hidden = mode !== "ik";
   }
 
   onSliderChange(callback: (angles: JointAngles) => void): void {
@@ -167,7 +200,15 @@ export class ControlPanel {
 
   update(state: FrameState): void {
     const ee = state.endEffector;
-    this.fkPosition.textContent = `x ${ee.x.toFixed(2)}  y ${ee.y.toFixed(2)}  z ${ee.z.toFixed(2)}`;
+    this.stateCells.eeX.textContent = ee.x.toFixed(2);
+    this.stateCells.eeY.textContent = ee.y.toFixed(2);
+    this.stateCells.eeZ.textContent = ee.z.toFixed(2);
+    const radToDeg = (rad: number) => Math.round((rad * 180) / Math.PI);
+    this.stateCells.theta1.textContent = `${radToDeg(state.angles.theta1)}°`;
+    this.stateCells.theta2.textContent = `${radToDeg(state.angles.theta2)}°`;
+    this.stateCells.theta3.textContent = `${radToDeg(state.angles.theta3)}°`;
+    this.stateCells.yaw.textContent = `${radToDeg(state.angles.baseYaw)}°`;
+    this.updateWorkspaceDot(state.workspacePoint);
 
     if (state.jacobian) {
       for (let row = 0; row < 3; row++) {
@@ -191,6 +232,17 @@ export class ControlPanel {
     });
     if (this.history.length > HISTORY_LENGTH) this.history.shift();
     this.drawChart();
+  }
+
+  private updateWorkspaceDot(point: { reach: number; height: number }): void {
+    const radius = Math.sqrt(point.reach ** 2 + point.height ** 2);
+    const reachable = radius <= MAX_REACH;
+    const drawScale = radius > WORKSPACE_DRAW_LIMIT ? WORKSPACE_DRAW_LIMIT / radius : 1;
+    const cx = WORKSPACE_ORIGIN_X + point.reach * drawScale * WORKSPACE_SCALE;
+    const cy = WORKSPACE_ORIGIN_Y - point.height * drawScale * WORKSPACE_SCALE;
+    this.workspaceDot.setAttribute("cx", cx.toFixed(1));
+    this.workspaceDot.setAttribute("cy", cy.toFixed(1));
+    this.workspaceDot.dataset.reachable = String(reachable);
   }
 
   private drawChart(): void {

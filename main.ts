@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { type JointAngles, lerpAngle } from "./src/arm";
+import { type JointAngles, LINK_LENGTHS, lerpAngle } from "./src/arm";
 import { HandTracker, type TrackedPose } from "./src/handTracking";
 import { stepIK, worldPositionToPlanarTarget } from "./src/ik";
 import { ControlPanel, type KinematicsMode } from "./src/panel";
@@ -111,7 +111,11 @@ if (sceneRoot) {
       currentAngles = fkAngles;
       robotArm.setAngles(currentAngles);
       const endEffector = robotArm.endEffectorPosition(currentAngles);
-      panel.update({ mode, angles: currentAngles, endEffector, jacobian: null, errorNorm: null });
+      const workspacePoint = {
+        reach: Math.sqrt(endEffector.x ** 2 + endEffector.z ** 2),
+        height: endEffector.y - LINK_LENGTHS.base,
+      };
+      panel.update({ mode, angles: currentAngles, endEffector, jacobian: null, errorNorm: null, workspacePoint });
       panel.updateTrackedPose(trackedPose, null);
     } else {
       targetMarker.visible = true;
@@ -140,12 +144,21 @@ if (sceneRoot) {
       };
       robotArm.setAngles(currentAngles);
       const endEffector = robotArm.endEffectorPosition(currentAngles);
+      // The raw, unclamped target — unlike worldPositionToPlanarTarget's
+      // reach/height (which clamps into the reachable disc for the solver),
+      // this is what the Workspace diagram plots so an out-of-reach hand
+      // position visibly shows as out of reach.
+      const workspacePoint = {
+        reach: Math.sqrt(ikTarget.x ** 2 + ikTarget.z ** 2),
+        height: ikTarget.y - LINK_LENGTHS.base,
+      };
       panel.update({
         mode,
         angles: currentAngles,
         endEffector,
         jacobian: result.jacobian,
         errorNorm: result.errorNorm,
+        workspacePoint,
       });
       panel.updateTrackedPose(trackedPose, ikTarget);
     }

@@ -54,14 +54,19 @@ h1 {
   color: #6b7280;
 }
 
-main {
+/* Dashboard grid: header (above) + left/center/right + a bottom 3-card row. */
+main.dashboard {
   display: grid;
-  grid-template-columns: 1fr minmax(300px, 380px);
+  grid-template:
+    "left center right" 1fr
+    "bottom bottom bottom" auto
+    / minmax(280px, 340px) 1fr minmax(280px, 340px);
   flex: 1;
   min-height: 0;
 }
 
 #scene-panel {
+  grid-area: center;
   position: relative;
   min-height: 0;
 }
@@ -101,18 +106,103 @@ main {
   display: none;
 }
 
+#axis-legend {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  z-index: 1;
+  display: flex;
+  gap: 0.35rem;
+}
+
+.axis-swatch {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.3rem;
+  height: 1.3rem;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #10131a;
+  background: rgb(18 21 26 / 85%);
+  border: 1px solid #2a2f3a;
+}
+
+.axis-x {
+  color: #ff5c5c;
+  border-color: #ff5c5c;
+}
+
+.axis-y {
+  color: #7dff9e;
+  border-color: #7dff9e;
+}
+
+.axis-z {
+  color: #5b8def;
+  border-color: #5b8def;
+}
+
+#scene-legend {
+  position: absolute;
+  bottom: 1rem;
+  left: 50%;
+  z-index: 1;
+  display: flex;
+  gap: 0.9rem;
+  list-style: none;
+  margin: 0;
+  padding: 0.35rem 0.9rem;
+  border: 1px solid #2a2f3a;
+  border-radius: 999px;
+  background: rgb(18 21 26 / 85%);
+  font-size: 0.72rem;
+  color: #9aa4b2;
+  transform: translateX(-50%);
+}
+
+.legend-target::before {
+  background: #7dff9e;
+}
+
+.legend-projection::before {
+  background: #7dff9e;
+  opacity: 0.5;
+}
+
 #control-panel {
+  grid-area: left;
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
+  gap: 0.9rem;
   min-height: 0;
   padding: 1rem 1.1rem 1.5rem;
   overflow-y: auto;
   background: #0f1116;
   border-left: 1px solid #1e222a;
+  border-right: 1px solid #1e222a;
 }
 
-#control-panel h2 {
+#right-panel {
+  grid-area: right;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  min-height: 0;
+  padding: 1rem 1.1rem 1.5rem;
+  overflow-y: auto;
+  background: #0f1116;
+}
+
+.card {
+  padding: 0.9rem 1rem 1.1rem;
+  border: 1px solid #1e222a;
+  border-radius: 10px;
+  background: #12151a;
+}
+
+.card h2 {
   margin: 0 0 0.6rem;
   font-size: 0.85rem;
   font-weight: 700;
@@ -121,13 +211,30 @@ main {
   color: #8b94a5;
 }
 
-#control-panel section p {
+.card h3 {
+  margin: 0.8rem 0 0.3rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #7a8494;
+}
+
+.card p {
   margin: 0.4rem 0;
   font-size: 0.85rem;
   color: #c3cad6;
 }
 
-#control-panel #analogies p {
+.card code {
+  font-size: 0.82em;
+  color: #cbd3df;
+  background: #1a1e26;
+  padding: 0.05rem 0.3rem;
+  border-radius: 4px;
+}
+
+#analogies p {
   color: #9aa4b2;
 }
 
@@ -251,11 +358,45 @@ main {
   text-align: right;
 }
 
+/* Explanation card: mode-dependent flow diagram + (IK only) Jacobian table. */
+.flow {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.2rem;
+  margin-bottom: 0.6rem;
+}
+
+.flow-step {
+  padding: 0.45rem 0.6rem;
+  border: 1px solid #2a2f3a;
+  border-radius: 6px;
+  background: #171a21;
+  color: #dfe4ec;
+  font-size: 0.8rem;
+  text-align: center;
+}
+
+.flow-step-op {
+  border-color: #3a6cc4;
+  background: #1c2c47;
+  color: #bcd2ff;
+  font-weight: 600;
+}
+
+.flow-arrow {
+  text-align: center;
+  color: #5a6472;
+  font-size: 0.85rem;
+  line-height: 1;
+}
+
 #jacobian-table {
   width: 100%;
   border-collapse: collapse;
   font-variant-numeric: tabular-nums;
   font-size: 0.8rem;
+  margin-top: 0.4rem;
 }
 
 #jacobian-table caption {
@@ -275,6 +416,29 @@ main {
 #ik-error {
   font-size: 0.78rem;
   color: #7a8494;
+}
+
+/* Workspace reachability diagram. */
+#workspace-viz svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.viz-label {
+  fill: #7a8494;
+  font-size: 8px;
+}
+
+#workspace-dot {
+  fill: #7dff9e;
+  stroke: #0d0f13;
+  stroke-width: 1;
+  transition: fill 0.15s ease;
+}
+
+#workspace-dot[data-reachable="false"] {
+  fill: #ff5c5c;
 }
 
 #angle-chart {
@@ -315,16 +479,61 @@ main {
   background: #ff6b6b;
 }
 
+/* Bottom explanation row. */
+#bottom-grid {
+  grid-area: bottom;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+  padding: 0.7rem 1.25rem;
+  background: #0f1116;
+  border-top: 1px solid #1e222a;
+}
+
+#bottom-grid .card {
+  max-height: 190px;
+  padding: 0.65rem 0.85rem 0.75rem;
+  overflow-y: auto;
+}
+
+#bottom-grid .card p {
+  margin: 0.3rem 0;
+  font-size: 0.8rem;
+}
+
+#bottom-grid .card h3 {
+  margin: 0.5rem 0 0.25rem;
+}
+
+.card-highlight {
+  background: #16233d;
+  border-color: #2f4d82;
+}
+
 @media (width <= 720px) {
-  main {
-    grid-template-columns: 1fr;
-    grid-template-rows: minmax(240px, 45vh) 1fr;
+  main.dashboard {
+    grid-template:
+      "center" minmax(240px, 40vh)
+      "left" auto
+      "right" auto
+      "bottom" auto
+      / 1fr;
     overflow-y: auto;
   }
 
   #control-panel {
     border-left: none;
+    border-right: none;
     border-top: 1px solid #1e222a;
     overflow-y: visible;
+  }
+
+  #right-panel {
+    border-top: 1px solid #1e222a;
+    overflow-y: visible;
+  }
+
+  #bottom-grid {
+    grid-template-columns: 1fr;
   }
 }
