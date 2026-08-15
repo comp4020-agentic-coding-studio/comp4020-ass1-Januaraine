@@ -1,27 +1,23 @@
 import * as THREE from "three";
-import type { JointAngles } from "./src/arm";
-import { HandTracker } from "./src/handTracking";
+import { type JointAngles, lerpAngle } from "./src/arm";
+import { HandTracker, type TrackedPose } from "./src/handTracking";
 import { stepIK, worldPositionToPlanarTarget } from "./src/ik";
 import { ControlPanel, type KinematicsMode } from "./src/panel";
-import { initScene } from "./src/scene";
+import { initScene, setTargetIndicatorPosition } from "./src/scene";
 
 const sceneRoot = document.querySelector<HTMLElement>("#scene-root");
 const status = document.querySelector<HTMLElement>("#scene-status");
 
-function lerpAngle(from: number, to: number, t: number): number {
-  const diff = ((to - from + Math.PI) % (2 * Math.PI)) - Math.PI;
-  return from + diff * t;
-}
-
 if (sceneRoot) {
-  const { scene, camera, renderer, controls, robotArm, targetMarker } = initScene(sceneRoot, {
-    onStatus: (message, kind) => {
-      if (!status) return;
-      status.textContent = message;
-      status.dataset.state = kind;
-      status.hidden = message === "";
-    },
-  });
+  const { scene, camera, renderer, controls, robotArm, targetMarker, targetProjectionLine, targetFloorRing } =
+    initScene(sceneRoot, {
+      onStatus: (message, kind) => {
+        if (!status) return;
+        status.textContent = message;
+        status.dataset.state = kind;
+        status.hidden = message === "";
+      },
+    });
 
   const panel = new ControlPanel();
 
@@ -49,20 +45,25 @@ if (sceneRoot) {
     mode = next;
   });
 
-  // Real webcam hand tracking drives the IK target; a Shift-drag on the 3D
-  // view is the fallback when the camera is denied, unavailable, or the
+  // Real webcam arm/hand tracking drives the IK target; a Shift-drag on the
+  // 3D view is the fallback when the camera is denied, unavailable, or the
   // tracking model fails to load — the IK math doesn't care which one fed it.
   let fallbackActive = false;
+  let trackedPose: TrackedPose | null = null;
   const handTracker = new HandTracker({
     onStatus: (trackingStatus, message) => {
       panel.setTrackingStatus(trackingStatus, message);
       fallbackActive = trackingStatus === "error";
+      if (trackingStatus === "no-hand") trackedPose = null;
     },
     onTarget: (worldTarget) => {
       if (mode === "ik" && !fallbackActive) ikTarget.copy(worldTarget);
     },
+    onPose: (pose) => {
+      trackedPose = pose;
+    },
   });
-  panel.mountCameraPreview(handTracker.getVideoElement());
+  panel.mountCameraPreview(handTracker.getCanvasElement());
   void handTracker.start();
 
   const raycaster = new THREE.Raycaster();
@@ -105,19 +106,33 @@ if (sceneRoot) {
 
     if (mode === "fk") {
       targetMarker.visible = false;
+      targetProjectionLine.visible = false;
+      targetFloorRing.visible = false;
       currentAngles = fkAngles;
       robotArm.setAngles(currentAngles);
       const endEffector = robotArm.endEffectorPosition(currentAngles);
       panel.update({ mode, angles: currentAngles, endEffector, jacobian: null, errorNorm: null });
+      panel.updateTrackedPose(trackedPose, null);
     } else {
       targetMarker.visible = true;
-      targetMarker.position.copy(ikTarget);
+      targetProjectionLine.visible = true;
+      targetFloorRing.visible = true;
+      setTargetIndicatorPosition({ targetMarker, targetProjectionLine, targetFloorRing }, ikTarget);
       const planarTarget = worldPositionToPlanarTarget(ikTarget);
       const result = stepIK(currentAngles.theta1, currentAngles.theta2, currentAngles.theta3, planarTarget);
+      // theta1/baseYaw keep chasing the fingertip target via IK exactly as
+      // before. theta2/theta3 are overridden from the tracked arm's own
+      // elbow bend / wrist pitch when available (clamped to the same
+      // physical range stepIK enforces internally), so the robot's elbow and
+      // wrist visibly match the real arm's posture instead of just whatever
+      // angles reach the target with a level tool. Falling back to
+      // `result.theta2/theta3` (the classic solve) when no pose is tracked —
+      // e.g. the Shift-drag fallback — needs no special-casing here.
+      const clampJoint = (v: number) => Math.max(-2.6, Math.min(2.6, v));
       currentAngles = {
         theta1: result.theta1,
-        theta2: result.theta2,
-        theta3: result.theta3,
+        theta2: clampJoint(trackedPose?.elbowBendRad ?? result.theta2),
+        theta3: clampJoint(trackedPose?.wristPitchRad ?? result.theta3),
         baseYaw: lerpAngle(currentAngles.baseYaw, planarTarget.baseYaw, 0.15),
       };
       robotArm.setAngles(currentAngles);
@@ -129,6 +144,7 @@ if (sceneRoot) {
         jacobian: result.jacobian,
         errorNorm: result.errorNorm,
       });
+      panel.updateTrackedPose(trackedPose, ikTarget);
     }
 
     renderer.render(scene, camera);

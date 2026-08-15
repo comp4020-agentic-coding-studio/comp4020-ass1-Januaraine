@@ -16,6 +16,12 @@ export const LINK_LENGTHS = {
 
 export const MAX_REACH = LINK_LENGTHS.shoulder + LINK_LENGTHS.elbow + LINK_LENGTHS.wrist;
 
+/** Shortest-path angle interpolation — lerping raw radians breaks near the ±π wrap. */
+export function lerpAngle(from: number, to: number, t: number): number {
+  const diff = ((to - from + Math.PI) % (2 * Math.PI)) - Math.PI;
+  return from + diff * t;
+}
+
 export interface JointAngles {
   theta1: number;
   theta2: number;

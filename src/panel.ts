@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import type { JointAngles } from "./arm";
-import type { HandTrackingStatus } from "./handTracking";
+import type { HandTrackingStatus, TrackedPose } from "./handTracking";
 
 export type KinematicsMode = "fk" | "ik";
 
@@ -49,6 +49,17 @@ export class ControlPanel {
   private readonly fkPosition = required<HTMLElement>("#fk-position");
   private readonly trackingStatus = required<HTMLElement>("#tracking-status");
   private readonly cameraPreview = required<HTMLElement>("#camera-preview");
+  private readonly trackedCells = {
+    shoulder: required<HTMLElement>('[data-tracked="shoulder"]'),
+    elbow: required<HTMLElement>('[data-tracked="elbow"]'),
+    wrist: required<HTMLElement>('[data-tracked="wrist"]'),
+    hand: required<HTMLElement>('[data-tracked="hand"]'),
+  };
+  private readonly targetCells = {
+    x: required<HTMLElement>('[data-target="x"]'),
+    y: required<HTMLElement>('[data-target="y"]'),
+    z: required<HTMLElement>('[data-target="z"]'),
+  };
   private readonly jacobianCells: HTMLElement[][] = [0, 1, 2].map((row) =>
     [0, 1, 2].map((col) => required<HTMLElement>(`[data-cell="${row}-${col}"]`)),
   );
@@ -125,17 +136,30 @@ export class ControlPanel {
     };
   }
 
-  mountCameraPreview(video: HTMLVideoElement): void {
-    this.cameraPreview.replaceChildren(video);
+  mountCameraPreview(canvas: HTMLCanvasElement): void {
+    this.cameraPreview.replaceChildren(canvas);
+  }
+
+  /** Renders the live shoulder/elbow/wrist/hand chain and the derived 3D target, or "–" placeholders when nothing is currently tracked. */
+  updateTrackedPose(pose: TrackedPose | null, target: THREE.Vector3 | null): void {
+    const fmt = (p: { x: number; y: number } | null | undefined) => (p ? `x ${p.x.toFixed(2)}  y ${p.y.toFixed(2)}` : "–");
+    this.trackedCells.shoulder.textContent = fmt(pose?.shoulder);
+    this.trackedCells.elbow.textContent = fmt(pose?.elbow);
+    this.trackedCells.wrist.textContent = fmt(pose?.wrist);
+    this.trackedCells.hand.textContent = fmt(pose?.hand);
+
+    this.targetCells.x.textContent = target ? target.x.toFixed(2) : "–";
+    this.targetCells.y.textContent = target ? target.y.toFixed(2) : "–";
+    this.targetCells.z.textContent = target ? target.z.toFixed(2) : "–";
   }
 
   setTrackingStatus(status: HandTrackingStatus, message?: string): void {
     const text: Record<HandTrackingStatus, string> = {
-      loading: "Loading hand tracking…",
-      tracking: "Tracking your hand — wave it to move the target.",
-      "no-hand": "No hand in view — show your hand to the camera.",
-      error: `Hand tracking unavailable (${message ?? "camera denied"}) — drag inside the 3D view instead.`,
-      stopped: "Hand tracking stopped.",
+      loading: "Loading arm tracking…",
+      tracking: "Tracking your arm — raise a hand and move it to set the target.",
+      "no-hand": "No hand in view — show your hand and arm to the camera.",
+      error: `Arm tracking unavailable (${message ?? "camera denied"}) — drag inside the 3D view instead.`,
+      stopped: "Arm tracking stopped.",
     };
     this.trackingStatus.textContent = text[status];
     this.trackingStatus.dataset.state = status;

@@ -58,9 +58,29 @@
         </section>
 
         <section id="ik-controls" data-testid="ik-controls">
-          <h2>A hand position sets the target</h2>
+          <h2>Your arm sets the target</h2>
+          <p class="explainer">
+            <strong>The camera doesn't see a hand. It sees landmarks.</strong>
+            The tracker estimates shoulder, elbow, wrist, and fingertip points on your arm from the
+            camera image, then maps the fingertip into a 3D target — this is a mapping of tracked
+            landmarks into the robot's workspace, not metric 3D tracking. The IK solver then finds
+            the joint angles that reach that target.
+          </p>
           <p id="tracking-status" data-testid="tracking-status" role="status">Starting camera…</p>
-          <div id="camera-preview" data-testid="camera-preview"></div>
+          <div id="camera-preview" data-testid="camera-preview">
+            <canvas></canvas>
+          </div>
+          <dl id="tracked-pose-readout" class="pose-readout" data-testid="tracked-pose-readout">
+            <div><dt>Shoulder</dt><dd data-tracked="shoulder">–</dd></div>
+            <div><dt>Elbow</dt><dd data-tracked="elbow">–</dd></div>
+            <div><dt>Wrist</dt><dd data-tracked="wrist">–</dd></div>
+            <div><dt>Hand (index tip)</dt><dd data-tracked="hand">–</dd></div>
+          </dl>
+          <dl id="target-readout" class="pose-readout" data-testid="target-readout">
+            <div><dt>Target X</dt><dd data-target="x">–</dd></div>
+            <div><dt>Target Y</dt><dd data-target="y">–</dd></div>
+            <div><dt>Target Z</dt><dd data-target="z">–</dd></div>
+          </dl>
           <p class="hint">No camera, or access denied? Hold Shift and drag inside the 3D view to move the target instead.</p>
         </section>
 

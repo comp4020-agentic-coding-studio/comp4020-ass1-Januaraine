@@ -131,8 +131,13 @@ main {
   color: #9aa4b2;
 }
 
-#control-panel #analogies strong {
+#ik-controls .explainer strong {
+  display: block;
+  margin-bottom: 0.2rem;
   color: #dfe4ec;
+  text-transform: uppercase;
+  font-size: 0.78rem;
+  letter-spacing: 0.02em;
 }
 
 .mode-toggle {
@@ -203,18 +208,47 @@ main {
   margin: 0.4rem 0;
 }
 
-#camera-preview video {
-  width: 160px;
-  height: 120px;
+#camera-preview canvas {
+  width: 240px;
+  height: 180px;
   border-radius: 8px;
   border: 1px solid #2a2f3a;
   object-fit: cover;
   background: #05070a;
 }
 
+#ik-controls .explainer {
+  font-size: 0.82rem;
+  color: #c3cad6;
+}
+
 #ik-controls .hint {
   font-size: 0.78rem;
   color: #7a8494;
+}
+
+.pose-readout {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.2rem 0.6rem;
+  margin: 0.5rem 0;
+}
+
+.pose-readout div {
+  display: contents;
+}
+
+.pose-readout dt {
+  font-size: 0.75rem;
+  color: #8b94a5;
+}
+
+.pose-readout dd {
+  margin: 0;
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  color: #cbd3df;
+  text-align: right;
 }
 
 #jacobian-table {

@@ -71,3 +71,32 @@ describe("real-world analogies", () => {
     expect(text).toMatch(/weld/i);
   });
 });
+
+describe("arm-pose tracking overlay", () => {
+  it("mounts a canvas (not a raw video) for the camera preview", () => {
+    expect(doc.querySelector("#camera-preview canvas")).toBeTruthy();
+  });
+
+  it("explains that the camera sees landmarks, not a hand", () => {
+    const text = doc.querySelector("#ik-controls .explainer")?.textContent ?? "";
+    expect(text).toMatch(/landmark/i);
+  });
+
+  it("does not claim metric 3D tracking", () => {
+    const text = doc.querySelector("#ik-controls .explainer")?.textContent ?? "";
+    expect(text).toMatch(/not metric 3d/i);
+  });
+
+  it("has a tracked-pose readout for shoulder, elbow, wrist, and hand", () => {
+    expect(doc.querySelector('[data-tracked="shoulder"]')).toBeTruthy();
+    expect(doc.querySelector('[data-tracked="elbow"]')).toBeTruthy();
+    expect(doc.querySelector('[data-tracked="wrist"]')).toBeTruthy();
+    expect(doc.querySelector('[data-tracked="hand"]')).toBeTruthy();
+  });
+
+  it("has a target readout for X, Y, and Z", () => {
+    expect(doc.querySelector('[data-target="x"]')).toBeTruthy();
+    expect(doc.querySelector('[data-target="y"]')).toBeTruthy();
+    expect(doc.querySelector('[data-target="z"]')).toBeTruthy();
+  });
+});

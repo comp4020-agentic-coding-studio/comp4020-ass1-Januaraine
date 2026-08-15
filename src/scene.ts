@@ -38,6 +38,25 @@ export interface SceneHandles {
   robotArm: RobotArm;
   /** A small marker showing where the current IK target is in the workspace. */
   targetMarker: THREE.Mesh;
+  /** A vertical line from the target down to the floor, so depth reads as the point moving through space rather than sliding on a flat plane. */
+  targetProjectionLine: THREE.Line;
+  /** A ring on the floor grid directly below the target, marking its (x, z). */
+  targetFloorRing: THREE.Mesh;
+}
+
+/** Moves the target marker and its floor-projection indicator to `position` in one call, so the target always reads as a 3D point rather than a flat cursor. */
+export function setTargetIndicatorPosition(
+  handles: Pick<SceneHandles, "targetMarker" | "targetProjectionLine" | "targetFloorRing">,
+  position: THREE.Vector3,
+): void {
+  const { targetMarker, targetProjectionLine, targetFloorRing } = handles;
+  targetMarker.position.copy(position);
+  targetFloorRing.position.set(position.x, 0.01, position.z);
+  const linePositions = targetProjectionLine.geometry.attributes.position as THREE.BufferAttribute;
+  linePositions.setXYZ(0, position.x, position.y, position.z);
+  linePositions.setXYZ(1, position.x, 0, position.z);
+  linePositions.needsUpdate = true;
+  targetProjectionLine.computeLineDistances();
 }
 
 // Sets up the 3D scene and the procedural RobotArm (see src/arm.ts — a
@@ -95,6 +114,19 @@ export function initScene(container: HTMLElement, options: InitSceneOptions = {}
     new THREE.MeshBasicMaterial({ color: 0x7dff9e, wireframe: true }),
   );
   scene.add(targetMarker);
+
+  const targetProjectionLine = new THREE.Line(
+    new THREE.BufferGeometry().setAttribute("position", new THREE.BufferAttribute(new Float32Array(6), 3)),
+    new THREE.LineDashedMaterial({ color: 0x7dff9e, transparent: true, opacity: 0.5, dashSize: 0.05, gapSize: 0.05 }),
+  );
+  scene.add(targetProjectionLine);
+
+  const targetFloorRing = new THREE.Mesh(
+    new THREE.RingGeometry(0.05, 0.07, 24),
+    new THREE.MeshBasicMaterial({ color: 0x7dff9e, transparent: true, opacity: 0.6, side: THREE.DoubleSide }),
+  );
+  targetFloorRing.rotation.x = -Math.PI / 2;
+  scene.add(targetFloorRing);
 
   const controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
@@ -167,5 +199,5 @@ export function initScene(container: HTMLElement, options: InitSceneOptions = {}
 
   onStatus?.("", "ready");
 
-  return { scene, camera, renderer, controls, robotArm, targetMarker };
+  return { scene, camera, renderer, controls, robotArm, targetMarker, targetProjectionLine, targetFloorRing };
 }
