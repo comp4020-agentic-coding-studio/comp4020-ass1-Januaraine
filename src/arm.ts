@@ -109,6 +109,7 @@ function orientCylinderBetween(mesh: THREE.Mesh, from: THREE.Vector3, to: THREE.
  */
 export class RobotArm {
   readonly group: THREE.Group;
+  private readonly pillar: THREE.Mesh;
   private readonly turntable: THREE.Mesh;
   private readonly linkMeshes: [THREE.Mesh, THREE.Mesh, THREE.Mesh];
   private readonly jointMeshes: [THREE.Mesh, THREE.Mesh, THREE.Mesh];
@@ -125,9 +126,9 @@ export class RobotArm {
     const joint = new THREE.MeshStandardMaterial({ color: 0xffb347, roughness: 0.35, metalness: 0.5 });
     const effector = new THREE.MeshStandardMaterial({ color: 0xff6b6b, roughness: 0.3, metalness: 0.4 });
 
-    const pillar = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.16, LINK_LENGTHS.base, 20), metal);
-    pillar.position.y = LINK_LENGTHS.base / 2;
-    this.group.add(pillar);
+    this.pillar = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.16, LINK_LENGTHS.base, 20), metal);
+    this.pillar.position.y = LINK_LENGTHS.base / 2;
+    this.group.add(this.pillar);
 
     this.turntable = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.32, 0.06, 24), metal);
     this.turntable.position.y = LINK_LENGTHS.base;
@@ -154,6 +155,21 @@ export class RobotArm {
 
   getAngles(): JointAngles {
     return { ...this.angles };
+  }
+
+  /** The joint sphere mesh for a given joint index — e.g. for annotation screen-projection or occlusion raycasting. */
+  getJointMesh(joint: 0 | 1 | 2): THREE.Mesh {
+    return this.jointMeshes[joint];
+  }
+
+  /** The end-effector mesh — e.g. for annotation screen-projection or occlusion raycasting. */
+  getEffectorMesh(): THREE.Mesh {
+    return this.effectorMesh;
+  }
+
+  /** Every opaque body mesh (base, turntable, links, joints, effector) — the candidate occluders when raycasting from the camera to a joint to test whether the arm's own body is in the way. */
+  getBodyMeshes(): THREE.Mesh[] {
+    return [this.pillar, this.turntable, ...this.linkMeshes, ...this.jointMeshes, this.effectorMesh];
   }
 
   /** World-space position of each joint plus the end effector. */

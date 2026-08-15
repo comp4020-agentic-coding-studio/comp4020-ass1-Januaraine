@@ -39,6 +39,9 @@ export function worldPositionToPlanarTarget(worldTarget: THREE.Vector3): PlanarT
 const SUBSTEPS_PER_CALL = 6;
 const GAIN = 0.35;
 const MAX_STEP_RAD = 0.2;
+// The one remaining physical clamp: keeps the shoulder from swinging visibly
+// below the base plane, through the floor grid.
+const SHOULDER_MIN_RAD = THREE.MathUtils.degToRad(-80);
 
 /**
  * Runs a handful of damped Jacobian-transpose iterations toward `target`,
@@ -68,11 +71,11 @@ export function stepIK(theta1: number, theta2: number, theta3: number, target: P
     t2 += clamp(delta[1]);
     t3 += clamp(delta[2]);
 
-    // Keep the arm looking physical: shoulder stays above the base plane,
-    // elbow/wrist don't wind past a full fold.
-    t1 = Math.max(-0.35, Math.min(Math.PI - 0.35, t1));
-    t2 = Math.max(-2.6, Math.min(2.6, t2));
-    t3 = Math.max(-2.6, Math.min(2.6, t3));
+    // Keep the shoulder from swinging visibly through the floor grid; elbow
+    // and wrist are otherwise free to rotate through the full circle.
+    t1 = Math.max(SHOULDER_MIN_RAD, Math.min(Math.PI, t1));
+    t2 = Math.max(-Math.PI, Math.min(Math.PI, t2));
+    t3 = Math.max(-Math.PI, Math.min(Math.PI, t3));
   }
 
   const errorNorm = Math.sqrt(error[0] ** 2 + error[1] ** 2 + error[2] ** 2);

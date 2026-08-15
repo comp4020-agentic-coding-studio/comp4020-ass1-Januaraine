@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { MAX_REACH, RobotArm } from "./arm";
+import { createJointLabels, type JointLabels } from "./labels";
 
 // Vertical FOV, held constant across every viewport aspect.
 const BASE_FOV_DEG = 45;
@@ -49,6 +50,8 @@ export interface SceneHandles {
   targetFloorRing: THREE.Mesh;
   /** Restores the camera and orbit target to the auto-framed pose computed at load. */
   resetView: () => void;
+  /** CSS2D overlay labels tracking each joint's world position. */
+  jointLabels: JointLabels;
 }
 
 /** Moves the target marker and its floor-projection indicator to `position` in one call, so the target always reads as a 3D point rather than a flat cursor. */
@@ -114,6 +117,7 @@ export function initScene(container: HTMLElement, options: InitSceneOptions = {}
   robotRoot.name = "RobotRoot";
   scene.add(robotRoot);
   const robotArm = new RobotArm(robotRoot);
+  const jointLabels = createJointLabels(container, robotArm);
 
   const targetMarker = new THREE.Mesh(
     new THREE.SphereGeometry(0.06, 16, 12),
@@ -147,6 +151,7 @@ export function initScene(container: HTMLElement, options: InitSceneOptions = {}
     camera.aspect = width / height;
     camera.updateProjectionMatrix();
     renderer.setSize(width, height);
+    jointLabels.resize(width, height);
   }
   new ResizeObserver(resize).observe(container);
   resize();
@@ -204,5 +209,6 @@ export function initScene(container: HTMLElement, options: InitSceneOptions = {}
     targetProjectionLine,
     targetFloorRing,
     resetView,
+    jointLabels,
   };
 }

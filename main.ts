@@ -9,8 +9,18 @@ const sceneRoot = document.querySelector<HTMLElement>("#scene-root");
 const status = document.querySelector<HTMLElement>("#scene-status");
 
 if (sceneRoot) {
-  const { scene, camera, renderer, controls, robotArm, targetMarker, targetProjectionLine, targetFloorRing, resetView } =
-    initScene(sceneRoot, {
+  const {
+    scene,
+    camera,
+    renderer,
+    controls,
+    robotArm,
+    targetMarker,
+    targetProjectionLine,
+    targetFloorRing,
+    resetView,
+    jointLabels,
+  } = initScene(sceneRoot, {
       onStatus: (message, kind) => {
         if (!status) return;
         status.textContent = message;
@@ -130,6 +140,7 @@ if (sceneRoot) {
       };
       panel.update({ mode, angles: currentAngles, endEffector, jacobian: null, errorNorm: null, workspacePoint });
       panel.updateTrackedPose(trackedPose, null);
+      jointLabels.setEndEffectorText(formatEndEffectorText(endEffector));
     } else {
       targetMarker.visible = true;
       targetProjectionLine.visible = true;
@@ -148,7 +159,7 @@ if (sceneRoot) {
       // actuator-level lerp (on top of handTracking.ts's own source-level
       // smoothing) damps whatever per-frame noise still reaches this point
       // before it hits the joint.
-      const clampJoint = (v: number) => Math.max(-2.6, Math.min(2.6, v));
+      const clampJoint = (v: number) => Math.max(-Math.PI, Math.min(Math.PI, v));
       currentAngles = {
         theta1: lerpAngle(currentAngles.theta1, result.theta1, 0.15),
         theta2: clampJoint(lerpAngle(currentAngles.theta2, trackedPose?.elbowBendRad ?? result.theta2, 0.15)),
@@ -174,8 +185,14 @@ if (sceneRoot) {
         workspacePoint,
       });
       panel.updateTrackedPose(trackedPose, ikTarget);
+      jointLabels.setEndEffectorText(formatEndEffectorText(endEffector));
     }
 
     renderer.render(scene, camera);
+    jointLabels.render(scene, camera);
   });
+}
+
+function formatEndEffectorText(position: THREE.Vector3): string {
+  return `(${position.x.toFixed(2)}, ${position.y.toFixed(2)}, ${position.z.toFixed(2)})`;
 }
