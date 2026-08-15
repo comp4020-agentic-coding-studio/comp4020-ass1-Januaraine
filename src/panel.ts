@@ -48,6 +48,7 @@ function required<T extends Element>(selector: string): T {
 export class ControlPanel {
   private readonly fkButton = required<HTMLButtonElement>("#mode-fk");
   private readonly ikButton = required<HTMLButtonElement>("#mode-ik");
+  private readonly resetViewButton = required<HTMLButtonElement>("#reset-view");
   private readonly fkControls = required<HTMLElement>("#fk-controls");
   private readonly ikControls = required<HTMLElement>("#ik-controls");
   private readonly fkExplanation = required<HTMLElement>("#fk-explanation");
@@ -111,6 +112,13 @@ export class ControlPanel {
       this.setMode("ik");
       callback("ik");
     });
+  }
+
+  /** "Reset view" button: resets the camera and, depending on the current
+   * mode, either the FK joint angles or the IK target. `main.ts` owns what
+   * "default" means for each, since it owns the arm/target state. */
+  onResetView(callback: () => void): void {
+    this.resetViewButton.addEventListener("click", callback);
   }
 
   private setMode(mode: KinematicsMode): void {

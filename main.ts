@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { type JointAngles, LINK_LENGTHS, lerpAngle } from "./src/arm";
+import { DEFAULT_ANGLES, type JointAngles, LINK_LENGTHS, lerpAngle } from "./src/arm";
 import { HandTracker, type TrackedPose } from "./src/handTracking";
 import { stepIK, worldPositionToPlanarTarget } from "./src/ik";
 import { ControlPanel, type KinematicsMode } from "./src/panel";
@@ -9,7 +9,7 @@ const sceneRoot = document.querySelector<HTMLElement>("#scene-root");
 const status = document.querySelector<HTMLElement>("#scene-status");
 
 if (sceneRoot) {
-  const { scene, camera, renderer, controls, robotArm, targetMarker, targetProjectionLine, targetFloorRing } =
+  const { scene, camera, renderer, controls, robotArm, targetMarker, targetProjectionLine, targetFloorRing, resetView } =
     initScene(sceneRoot, {
       onStatus: (message, kind) => {
         if (!status) return;
@@ -25,9 +25,22 @@ if (sceneRoot) {
   let currentAngles: JointAngles = robotArm.getAngles();
   let fkAngles: JointAngles = panel.readSliderAngles();
   const ikTarget = robotArm.endEffectorPosition(currentAngles);
+  // Captured once, before anything moves it — what "Reset view" returns the
+  // IK target to.
+  const defaultIkTarget = ikTarget.clone();
 
   panel.onSliderChange((angles) => {
     fkAngles = angles;
+  });
+
+  panel.onResetView(() => {
+    resetView();
+    if (mode === "fk") {
+      fkAngles = DEFAULT_ANGLES;
+      panel.setSliderAngles(DEFAULT_ANGLES);
+    } else {
+      ikTarget.copy(defaultIkTarget);
+    }
   });
 
   panel.onModeChange((next) => {

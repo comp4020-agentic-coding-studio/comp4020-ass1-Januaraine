@@ -39,6 +39,14 @@ export interface JointAngles {
   baseYaw: number;
 }
 
+/** The pose the arm loads with, and what "Reset view" returns it to. */
+export const DEFAULT_ANGLES: JointAngles = {
+  theta1: Math.PI / 4,
+  theta2: -Math.PI / 3,
+  theta3: -Math.PI / 6,
+  baseYaw: 0,
+};
+
 export interface PlanarPose {
   /** Horizontal distance from the base's vertical axis. */
   reach: number;
@@ -105,7 +113,7 @@ export class RobotArm {
   private readonly linkMeshes: [THREE.Mesh, THREE.Mesh, THREE.Mesh];
   private readonly jointMeshes: [THREE.Mesh, THREE.Mesh, THREE.Mesh];
   private readonly effectorMesh: THREE.Mesh;
-  private angles: JointAngles = { theta1: Math.PI / 4, theta2: -Math.PI / 3, theta3: -Math.PI / 6, baseYaw: 0 };
+  private angles: JointAngles = { ...DEFAULT_ANGLES };
 
   constructor(parent: THREE.Object3D) {
     this.group = new THREE.Group();

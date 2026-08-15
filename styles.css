@@ -106,13 +106,47 @@ main.dashboard {
   display: none;
 }
 
-#axis-legend {
+.scene-toolbar {
   position: absolute;
   top: 1rem;
   right: 1rem;
   z-index: 1;
   display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+#axis-legend {
+  display: flex;
   gap: 0.35rem;
+}
+
+.reset-view-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.3rem 0.7rem;
+  border: 1px solid #2a2f3a;
+  border-radius: 999px;
+  background: rgb(18 21 26 / 85%);
+  color: #cbd3df;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.reset-view-btn:hover {
+  border-color: #3a6cc4;
+  color: #e6e9ef;
+}
+
+.reset-view-btn:focus-visible {
+  outline: 2px solid #5b8def;
+  outline-offset: 2px;
 }
 
 .axis-swatch {

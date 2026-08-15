@@ -19,10 +19,15 @@
       <section id="scene-panel" data-testid="scene-panel" aria-label="3D robotic arm scene">
         <div id="scene-root" data-testid="scene-root" aria-label="3D robotic arm scene"></div>
         <p id="scene-status" data-testid="scene-status" role="status"></p>
-        <div id="axis-legend" aria-hidden="true">
-          <span class="axis-swatch axis-x">X</span>
-          <span class="axis-swatch axis-y">Y</span>
-          <span class="axis-swatch axis-z">Z</span>
+        <div class="scene-toolbar">
+          <div id="axis-legend" aria-hidden="true">
+            <span class="axis-swatch axis-x">X</span>
+            <span class="axis-swatch axis-y">Y</span>
+            <span class="axis-swatch axis-z">Z</span>
+          </div>
+          <button type="button" id="reset-view" data-testid="reset-view" class="reset-view-btn" aria-label="Reset camera view and arm pose">
+            <span aria-hidden="true">↺</span> Reset
+          </button>
         </div>
         <ul id="scene-legend" class="chart-legend" aria-hidden="true">
           <li class="legend-target">Target</li>
