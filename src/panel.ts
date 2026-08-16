@@ -2,6 +2,7 @@ import * as THREE from "three";
 import { MAX_REACH } from "./arm";
 import type { JointAngles } from "./arm";
 import type { HandTrackingStatus, TrackedPose } from "./handTracking";
+import { CANVAS_THEME_TOKENS, type Theme } from "./theme";
 
 export type KinematicsMode = "fk" | "ik";
 
@@ -96,11 +97,17 @@ export class ControlPanel {
   private readonly chartCtx: CanvasRenderingContext2D;
 
   private history: { theta1: number; theta2: number; theta3: number }[] = [];
+  private chartTokens = CANVAS_THEME_TOKENS.dark;
 
   constructor() {
     const ctx = this.chart.getContext("2d");
     if (!ctx) throw new Error("2D canvas context unavailable");
     this.chartCtx = ctx;
+  }
+
+  /** Re-tints the angle chart's canvas-drawn colors, which can't read CSS custom properties. */
+  setTheme(theme: Theme): void {
+    this.chartTokens = CANVAS_THEME_TOKENS[theme];
   }
 
   onModeChange(callback: (mode: KinematicsMode) => void): void {
@@ -256,20 +263,21 @@ export class ControlPanel {
   private drawChart(): void {
     const { width, height } = this.chart;
     const ctx = this.chartCtx;
+    const tokens = this.chartTokens;
     ctx.clearRect(0, 0, width, height);
-    ctx.fillStyle = "#12151a";
+    ctx.fillStyle = tokens.chartBg;
     ctx.fillRect(0, 0, width, height);
 
-    ctx.strokeStyle = "#2a2f3a";
+    ctx.strokeStyle = tokens.chartMidline;
     ctx.beginPath();
     ctx.moveTo(0, height / 2);
     ctx.lineTo(width, height / 2);
     ctx.stroke();
 
     const series: { key: "theta1" | "theta2" | "theta3"; color: string }[] = [
-      { key: "theta1", color: "#ffb347" },
-      { key: "theta2", color: "#5b8def" },
-      { key: "theta3", color: "#ff6b6b" },
+      { key: "theta1", color: tokens.chartSeries.theta1 },
+      { key: "theta2", color: tokens.chartSeries.theta2 },
+      { key: "theta3", color: tokens.chartSeries.theta3 },
     ];
     const yFor = (rad: number) => height / 2 - (rad / CHART_RANGE_RAD) * (height / 2 - 4);
     const xFor = (index: number) => (index / Math.max(HISTORY_LENGTH - 1, 1)) * width;

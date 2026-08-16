@@ -4,6 +4,16 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>When a Robot Moves, Which Problem Is It Solving? — FK vs IK</title>
+    <script>
+      (function () {
+        try {
+          var stored = localStorage.getItem("fk-ik-theme");
+          document.documentElement.dataset.theme = stored === "light" ? "light" : "dark";
+        } catch (e) {
+          document.documentElement.dataset.theme = "dark";
+        }
+      })();
+    </script>
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
@@ -11,6 +21,9 @@
       <nav aria-label="Primary">
         <a href="./">Home</a>
       </nav>
+      <button type="button" id="theme-toggle" data-testid="theme-toggle" class="theme-toggle-btn" aria-label="Switch to light mode">
+        <span aria-hidden="true">🌙</span> Dark
+      </button>
       <h1>When a Robot Moves, Which Problem Is It Solving?</h1>
       <p class="subtitle">Forward Kinematics vs Inverse Kinematics</p>
       <p class="tagline">Drag the joints, or wave a hand — watch which one has to solve for an answer.</p>
@@ -177,14 +190,14 @@
           <svg viewBox="0 0 200 180" role="img" aria-label="Reachable workspace: blue is in reach, red hatching is out of reach">
             <defs>
               <pattern id="unreachable-hatch" width="6" height="6" patternTransform="rotate(45)" patternUnits="userSpaceOnUse">
-                <rect width="6" height="6" fill="#3a1414"></rect>
-                <line x1="0" y1="0" x2="0" y2="6" stroke="#7a3030" stroke-width="2"></line>
+                <rect width="6" height="6" class="workspace-hatch-bg"></rect>
+                <line x1="0" y1="0" x2="0" y2="6" class="workspace-hatch-line" stroke-width="2"></line>
               </pattern>
             </defs>
             <rect x="0" y="0" width="200" height="180" fill="url(#unreachable-hatch)"></rect>
-            <path d="M 30 18 A 77 77 0 0 1 30 172 Z" fill="#1d3a63" stroke="#3a6cc4" stroke-width="1.5"></path>
-            <line x1="30" y1="6" x2="30" y2="174" stroke="#4a5568"></line>
-            <line x1="26" y1="95" x2="112" y2="95" stroke="#4a5568"></line>
+            <path d="M 30 18 A 77 77 0 0 1 30 172 Z" class="workspace-reachable" stroke-width="1.5"></path>
+            <line x1="30" y1="6" x2="30" y2="174" class="workspace-axis-line"></line>
+            <line x1="26" y1="95" x2="112" y2="95" class="workspace-axis-line"></line>
             <text x="34" y="16" class="viz-label">height ↑</text>
             <text x="96" y="90" class="viz-label">reach →</text>
             <text x="34" y="30" class="viz-label">R = 2.4 m</text>

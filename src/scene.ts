@@ -2,6 +2,7 @@ import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { MAX_REACH, RobotArm } from "./arm";
 import { createJointLabels, type JointLabels } from "./labels";
+import { CANVAS_THEME_TOKENS, type Theme } from "./theme";
 
 // Vertical FOV, held constant across every viewport aspect.
 const BASE_FOV_DEG = 45;
@@ -52,6 +53,8 @@ export interface SceneHandles {
   resetView: () => void;
   /** CSS2D overlay labels tracking each joint's world position. */
   jointLabels: JointLabels;
+  /** Re-tints the scene background/fog/grid/axes/target indicators for the given theme. */
+  applyTheme: (theme: Theme) => void;
 }
 
 /** Moves the target marker and its floor-projection indicator to `position` in one call, so the target always reads as a 3D point rather than a flat cursor. */
@@ -103,12 +106,12 @@ export function initScene(container: HTMLElement, options: InitSceneOptions = {}
   // Sized relative to the arm's own reach so the floor reads as a coordinate
   // frame under it, not the dominant shape on screen.
   const grid = new THREE.GridHelper(MAX_REACH * 2.6, 12, 0x3a4250, 0x1f232b);
-  const gridMaterial = grid.material as THREE.Material;
+  const gridMaterial = grid.material as THREE.LineBasicMaterial;
   gridMaterial.transparent = true;
   gridMaterial.opacity = 0.6;
   scene.add(grid);
   const axes = new THREE.AxesHelper(MAX_REACH * 0.5);
-  const axesMaterial = axes.material as THREE.Material;
+  const axesMaterial = axes.material as THREE.LineBasicMaterial;
   axesMaterial.transparent = true;
   axesMaterial.opacity = 0.6;
   scene.add(axes);
@@ -197,6 +200,25 @@ export function initScene(container: HTMLElement, options: InitSceneOptions = {}
     controls.update();
   }
 
+  // Materials for the target marker/projection line/floor ring all share the
+  // same accent color, tracked once here so applyTheme can re-tint all three
+  // without re-deriving them from the scene graph each time.
+  const targetMaterials = [
+    targetMarker.material as THREE.MeshBasicMaterial,
+    targetProjectionLine.material as THREE.LineDashedMaterial,
+    targetFloorRing.material as THREE.MeshBasicMaterial,
+  ];
+
+  function applyTheme(theme: Theme): void {
+    const tokens = CANVAS_THEME_TOKENS[theme];
+    scene.background = new THREE.Color(tokens.sceneBackground);
+    if (scene.fog instanceof THREE.Fog) scene.fog.color.set(tokens.sceneFog);
+    gridMaterial.color.set(tokens.gridTint);
+    gridMaterial.opacity = tokens.gridOpacity;
+    axesMaterial.opacity = tokens.axesOpacity;
+    for (const material of targetMaterials) material.color.set(tokens.targetColor);
+  }
+
   onStatus?.("", "ready");
 
   return {
@@ -210,5 +232,6 @@ export function initScene(container: HTMLElement, options: InitSceneOptions = {}
     targetFloorRing,
     resetView,
     jointLabels,
+    applyTheme,
   };
 }

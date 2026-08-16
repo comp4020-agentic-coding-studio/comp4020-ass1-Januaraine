@@ -4,6 +4,7 @@ import { HandTracker, type TrackedPose } from "./src/handTracking";
 import { stepIK, worldPositionToPlanarTarget } from "./src/ik";
 import { ControlPanel, type KinematicsMode } from "./src/panel";
 import { initScene, setTargetIndicatorPosition } from "./src/scene";
+import { applyDomTheme, getInitialTheme, setStoredTheme, type Theme } from "./src/theme";
 
 const sceneRoot = document.querySelector<HTMLElement>("#scene-root");
 const status = document.querySelector<HTMLElement>("#scene-status");
@@ -20,6 +21,7 @@ if (sceneRoot) {
     targetFloorRing,
     resetView,
     jointLabels,
+    applyTheme: applySceneTheme,
   } = initScene(sceneRoot, {
       onStatus: (message, kind) => {
         if (!status) return;
@@ -30,6 +32,23 @@ if (sceneRoot) {
     });
 
   const panel = new ControlPanel();
+
+  let theme: Theme = getInitialTheme();
+  const themeToggle = document.querySelector<HTMLButtonElement>("#theme-toggle");
+  function setTheme(next: Theme): void {
+    theme = next;
+    applyDomTheme(theme);
+    setStoredTheme(theme);
+    panel.setTheme(theme);
+    applySceneTheme(theme);
+    if (themeToggle) {
+      themeToggle.setAttribute("aria-label", theme === "dark" ? "Switch to light mode" : "Switch to dark mode");
+      themeToggle.innerHTML =
+        theme === "dark" ? '<span aria-hidden="true">🌙</span> Dark' : '<span aria-hidden="true">☀️</span> Light';
+    }
+  }
+  themeToggle?.addEventListener("click", () => setTheme(theme === "dark" ? "light" : "dark"));
+  setTheme(theme);
 
   let mode: KinematicsMode = "ik";
   let currentAngles: JointAngles = robotArm.getAngles();
