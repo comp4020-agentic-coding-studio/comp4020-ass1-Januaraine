@@ -1,85 +1,30 @@
 # Process overview
 
-<!-- TEMPLATE: this file is a shape to fill in, not a form. Replace everything
-     in it with your own overview, and delete this comment — `pnpm
-     check:evidence` will remind you if it's still here. -->
-
-A reading-guide to how the work came together --- a map to your process, not an
-essay about it. Markers read this file and follow its citations; they don't
-trawl the repo for evidence you didn't point at, so if a moment mattered, cite
-it.
-
-This file is the shape; the course site's
-[assessment page](https://comp.anu.edu.au/courses/comp4020-agentic-coding-studio/topics/assessment/#what-you-submit)
-is the requirement, and its
-[word counts](https://comp.anu.edu.au/courses/comp4020-agentic-coding-studio/topics/assessment/#word-counts)
-cover every deliverable.
-
 ## What I built
 
-One paragraph: the thing, and the idea behind it.
+An interactive 3D web explainer for robotic kinematics (Forward & Inverse Kinematics), built with Vite, TypeScript, Three.js, and MediaPipe hand tracking. Designed with a cyberpunk laboratory dashboard aesthetic, the app features interactive 3D joint controls, real-time hand tracking for IK target control, on-canvas coordinate callouts, and a responsive layout that transitions from a three-column desktop view to a single-column mobile flow.
 
 ## The moments that mattered
 
-Three or four for an assignment; fewer is fine for a weekly prototype. Keep the
-list short so each moment has room to do all four jobs:
+### Moment 1: Pivoting from External GLB Asset to Procedural TypeScript Modeling for Precise Kinematics
 
-1. **what happened** --- the problem, or the thing the agent got wrong
-2. **what you did instead of the obvious thing** --- the call you made, and why
-   it beat the obvious one
-3. **how you knew it was right** --- the check you ran, the viewport you looked
-   at, what you read before accepting the diff
-4. **the citation** --- a commit or commit range, a `CLAUDE.md` change, a check
-   that went from red to green, a prompt paired with the commit it produced
+1. **what happened**: Initially, I planned to import a pre-built .glb robotic arm model from Blender. However, controlling joint kinematics programmatically required constant tree traversal (getObjectByName()) and was fragile. Misaligned Blender pivot points and nested transform matrices created unpredictable offsets during 360° FK/IK rotations and joint callout tracking.
+2. **what you did instead of the obvious thing**: Instead of spending hours re-exporting and fighting Blender origin points, I dropped the external GLB asset entirely. I refactored the entire robotic arm into a fully procedural, code-defined hierarchy in TypeScript using native Three.js primitives (CylinderGeometry, SphereGeometry). This made every pivot point, local transform matrix, and material parameter completely transparent and strictly controlled in code.
+3. **how you knew it was right**: FK/IK calculations immediately became deterministic: joint angles mapped $1:1$ to local mesh rotations without manual matrix offset patches. On-canvas label anchors and Raycaster occlusion checks tracked joint coordinates effortlessly, while eliminating asset loading overhead.
+4. **the citation**: [`c3fd027...a24d907`](https://github.com/comp4020-agentic-coding-studio/comp4020-ass1-Januaraine/compare/c3fd027...a24d907)
 
-Jobs 2 and 3 are the ones the repo can't tell a reader on its own, so they're
-where the marks are. The strongest moments are the ones where a correction
-landed in the **harness** rather than in another prompt --- a rule added to
-`CLAUDE.md`, a check wired up, an attempt thrown away: re-prompting until it
-passes is the routine case, and changing what the agent works against is the
-skilled one.
 
-Cite each moment as a link whose text is the commit hash or range and whose
-target is this repo's commit or compare URL, so a reader clicks straight to the
-evidence:
+### Moment 2: Reframing MediaPipe Input from Point-Target Tracking to Full Pose Kinematics
 
-- one commit: [`a1b2c3d`](https://github.com/YOUR-ORG/YOUR-REPO/commit/a1b2c3d)
-- a range:
-  [`a1b2c3d...e4f5a6b`](https://github.com/YOUR-ORG/YOUR-REPO/compare/a1b2c3d...e4f5a6b)
+1. **what happened**: MediaPipe hand-tracking originally only provided a 3D coordinate point. Treating it as a naive end-effector target caused the robotic arm to blindly chase spatial positions without reflecting true 3D hand orientation or wrist rotation, leading to unnatural arm configurations and joint-snapping when reaching workspace limits.
+2. **what you did instead of the obvious thing**: Instead of just using hand tracking as a 3D pointer ("target movement"), I refactored the interaction pipeline into a full "Pose → IK" mapping system. I mapped hand and wrist orientation vectors directly to joint rotation angles ($\theta_1, \theta_2, \theta_3$), added 3D axis-mirroring for intuitive camera control, and implemented LERP filtering with tracking-loss hysteresis to eliminate jitter.
+3. **how you knew it was right**: Rotating the wrist in front of the camera smoothly turned the robot's corresponding joint across its full 360° range without gimbal locking. When tracking dropped, hysteresis prevented sudden position jumps, keeping the robot stable.
+4. **the citation**: [`995a9de...b3c0771`](https://github.com/comp4020-agentic-coding-studio/comp4020-ass1-Januaraine/compare/995a9de...b3c0771)
 
-To pair a prompt with the commit it produced, quote the prompt (curated, not a
-full transcript) next to the citation:
 
-> the prompt, verbatim
+### Moment 3: Restructuring CSS Architecture for Mobile Viewport Collision
 
-Screenshots are welcome where one carries the verification better than a
-sentence does. Commit the file to this repo and link it with a **relative**
-path, which is what makes it render on GitHub: `![alt text](docs/before.png)`.
-Images don't count towards the word count and don't replace the citation.
-
-### A worked moment, for shape
-
-Delete this section along with the rest of the boilerplate --- it's here to show
-the four jobs in one paragraph, not to be imitated in content.
-
-> The date formatter kept coming back with `toLocaleDateString()` and no locale
-> argument, so the same build rendered differently on my machine and in CI. I'd
-> already re-prompted it twice, which fixed the line but not the habit, so the
-> third time I put the rule in `CLAUDE.md` instead
-> ([`3f9ac21`](https://github.com/YOUR-ORG/YOUR-REPO/commit/3f9ac21)) and added
-> a spec test that fails on a bare `toLocaleDateString`. That's what told me it
-> had actually taken: the test went red against the old code and green against
-> the new, and the next two features it wrote passed it without prompting
-> ([`3f9ac21...b7e0d14`](https://github.com/YOUR-ORG/YOUR-REPO/compare/3f9ac21...b7e0d14)).
-
-## Before you ship
-
-`pnpm check:evidence` verifies your citations resolve to real commits, that the
-current reflection entry is in `reflections/`, and that your `CLAUDE.md` is
-there --- before a marker ever opens the file. It checks that your map is
-traceable, not that it is good: the marker judges whether your small,
-deliberately chosen set of moments shows real judgement and reflection. A green
-check is not a substitute for that curation.
-
-Images are deliberately not checked, because whether one renders is visible the
-moment you look. Open this file on GitHub and look at it before you ship.
+1. **what happened**: The mobile layout (`<=1024px`) collapsed completely. Desktop CSS Grid areas and fixed card heights were not properly overridden, forcing panels and absolute-positioned elements (like the webcam preview canvas) to stack directly on top of each other over the text content.
+2. **what you did instead of the obvious thing**: Rather than endlessly re-prompting the agent to tweak individual card styles, I enforced a full single-column Flexbox layout reset (`flex-direction: column`, `height: auto !important`, `grid-area: auto !important`). Crucially, I maintained `#scene-panel` as `position: relative` while converting all inner components to standard document flow, keeping canvas HUD overlays scoped without breaking the page layout.
+3. **how you knew it was right**: Inspected the layout in browser DevTools under mobile viewports (<=1024px). All sections (`#scene-panel`, `#control-panel`, `#right-panel`, `#bottom-grid`) stacked sequentially in DOM order, camera video stayed inside its parent container, and page scrolling worked without overlap.
+4. **the citation**: ['11658b4'](https://github.com/comp4020-agentic-coding-studio/comp4020-ass1-Januaraine/commit/11658b4)

@@ -1,0 +1,13 @@
+# Assignment 1 retro
+
+**What was the breakthrough that moved the work forward?**
+The breakthrough was realising that my hand-tracking problem was not primarily an IK problem, but a representation problem. My first implementation treated hand tracking as a way to move a target point in 3D space. The target moved when I moved my hand, but the robot did not meaningfully reflect changes in wrist orientation or the shape of the hand pose, and the interaction effectively felt constrained to a plane. I initially thought I needed to improve the IK calculation, but inspecting the tracking data made it clear that the system was not receiving enough information for the behaviour I wanted in the first place.
+
+I therefore reframed the interaction from “hand position → target movement” to “hand pose → robot pose → IK”. This changed what I asked the Agent to build and what I considered evidence that the feature was working. Instead of only checking whether the green target followed my hand, I started checking whether the tracked pose contained meaningful 3D information and whether changes in the input were propagated into the robot's joint state. This also led me to simplify the robot representation rather than forcing the downloaded GLB model into a hierarchy that it was not designed to provide. The important progress was not a better-looking animation, but identifying the correct abstraction for the interaction before trying to optimise its implementation.
+
+
+**What did this work change about who I want to be as a software developer?**
+
+This work made me more conscious of the difference between making an implementation respond and representing the problem correctly. I previously tended to treat an unexpected result as something that needed another implementation fix: adjust the calculation, change the interaction, or ask the Agent to modify the code. Working on the hand-tracking and IK system showed me that sometimes the more important question is whether the system is representing the right state at all.
+
+I want to become a developer who is more willing to stop and inspect the data flowing through a system before changing its behaviour. In this project, the useful debugging question was not simply “Why isn't the robot moving correctly?”, but “What information about the user's pose does the system actually know?” That shift feels important to me because it applies beyond interactive graphics: a system cannot produce a meaningful result from information it never represented. I want to carry that habit into future projects — questioning the abstraction and the data model before repeatedly fixing the symptoms at the implementation level.
