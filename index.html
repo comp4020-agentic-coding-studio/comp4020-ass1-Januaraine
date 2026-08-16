@@ -86,13 +86,16 @@
 
         <section id="ik-controls" class="card" data-testid="ik-controls">
           <h2>Your arm sets the target</h2>
-          <p class="explainer">
-            <strong>The camera doesn't see a hand. It sees landmarks.</strong>
-            The tracker estimates shoulder, elbow, wrist, and fingertip points on your arm from the
-            camera image, then maps the fingertip into a 3D target — this is a mapping of tracked
-            landmarks into the robot's workspace, not metric 3D tracking. The IK solver then finds
-            the joint angles that reach that target.
-          </p>
+          <details class="explainer-details">
+            <summary>How landmark tracking works</summary>
+            <p class="explainer">
+              <strong>The camera doesn't see a hand. It sees landmarks.</strong>
+              The tracker estimates shoulder, elbow, wrist, and fingertip points on your arm from the
+              camera image, then maps the fingertip into a 3D target — this is a mapping of tracked
+              landmarks into the robot's workspace, not metric 3D tracking. The IK solver then finds
+              the joint angles that reach that target.
+            </p>
+          </details>
           <p id="tracking-status" data-testid="tracking-status" role="status">Starting camera…</p>
           <div id="camera-preview" data-testid="camera-preview">
             <canvas></canvas>

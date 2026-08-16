@@ -571,6 +571,17 @@ main.dashboard {
   color: var(--text-tertiary);
 }
 
+/* Desktop: the explainer stays plain text, not an accordion — see the
+ * mobile media query below, which reverses both rules to restore the
+ * native <details> collapse/expand behaviour on narrow screens. */
+#ik-controls .explainer-details > summary {
+  display: none;
+}
+
+#ik-controls .explainer-details:not([open]) > .explainer {
+  display: block;
+}
+
 .pose-readout {
   display: grid;
   grid-template-columns: 1fr auto;
@@ -829,5 +840,20 @@ main.dashboard {
     display: flex !important;
     flex-direction: column !important;
     gap: 16px !important;
+  }
+
+  /* Collapsed by default (no [open] attribute in the HTML) so the wall of
+   * explainer text doesn't push the camera preview below the fold. */
+  #ik-controls .explainer-details > summary {
+    display: list-item;
+    margin: 0.4rem 0;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text-emphasis);
+    cursor: pointer;
+  }
+
+  #ik-controls .explainer-details:not([open]) > .explainer {
+    display: none;
   }
 }
